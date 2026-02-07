@@ -540,8 +540,8 @@
                 },
                 side: THREE.DoubleSide
             });
-            const liquidDisc = new THREE.Mesh(new THREE.CircleGeometry(0.48, 64), liquidDiscMat);
-            liquidDisc.position.z = 1.15;
+            const liquidDisc = new THREE.Mesh(new THREE.CircleGeometry(0.52, 64), liquidDiscMat);
+            liquidDisc.position.z = 1.32;
             ballGroup.add(liquidDisc);
             window.liquidDiscMat = liquidDiscMat;
 
@@ -585,13 +585,13 @@
                 });
                 
                 kanyeDisc = new THREE.Mesh(new THREE.CircleGeometry(0.38, 64), discMat);
-                kanyeDisc.position.z = 1.2;
+                kanyeDisc.position.z = 1.35;
                 ballGroup.add(kanyeDisc);
                 
                 // Black rim around porthole
                 const rimMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0a, side: THREE.DoubleSide });
-                const rim = new THREE.Mesh(new THREE.RingGeometry(0.46, 0.52, 64), rimMat);
-                rim.position.z = 1.18;
+                const rim = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.58, 64), rimMat);
+                rim.position.z = 1.31;
                 ballGroup.add(rim);
             };
             
