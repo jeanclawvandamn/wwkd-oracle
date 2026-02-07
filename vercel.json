@@ -1,0 +1,13 @@
+{
+  "rewrites": [
+    { "source": "/api/wisdom", "destination": "/api/wisdom" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    }
+  ]
+}

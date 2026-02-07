@@ -1,8 +1,12 @@
 {
-  "name": "wwkd-kanye-oracle",
+  "name": "ye-ball",
   "version": "1.0.0",
-  "description": "What Would Kanye Do - A minimalist wisdom oracle",
+  "description": "YE-BALL - Seek the Wisdom of Ye",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
