@@ -490,7 +490,6 @@
             const portholeLiquidShader = `
                 varying vec2 vUv;
                 uniform float uTime;
-                uniform vec2 uLiquidOffset;
                 uniform float uShake;
                 
                 ${noiseGLSL}
@@ -501,12 +500,9 @@
                     float dist = length(uv - center);
                     if (dist > 0.5) discard;
                     
-                    // Sloshing offset
-                    vec2 slosh = uv + uLiquidOffset * 0.3;
-                    
-                    // Animated purple liquid
-                    float n1 = snoise(vec3(slosh * 4.0, uTime * 0.4)) * 0.5 + 0.5;
-                    float n2 = snoise(vec3(slosh * 6.0 + 50.0, uTime * 0.3)) * 0.5 + 0.5;
+                    // Animated purple liquid (no sloshing)
+                    float n1 = snoise(vec3(uv * 4.0, uTime * 0.4)) * 0.5 + 0.5;
+                    float n2 = snoise(vec3(uv * 6.0 + 50.0, uTime * 0.3)) * 0.5 + 0.5;
                     
                     vec3 purple1 = vec3(0.4, 0.15, 0.6);
                     vec3 purple2 = vec3(0.2, 0.05, 0.35);
@@ -521,8 +517,8 @@
                     // Center highlight
                     color += vec3(0.15, 0.08, 0.25) * (1.0 - dist * 1.5);
                     
-                    // Shake energy
-                    color += vec3(0.3, 0.15, 0.5) * uShake * (sin(uTime * 10.0) * 0.5 + 0.5);
+                    // Glow on shake/tap
+                    color += vec3(0.5, 0.25, 0.8) * uShake * (sin(uTime * 10.0) * 0.3 + 0.7);
                     
                     gl_FragColor = vec4(color, 1.0);
                 }
@@ -534,7 +530,6 @@
                 fragmentShader: portholeLiquidShader,
                 uniforms: {
                     uTime: { value: 0 },
-                    uLiquidOffset: { value: new THREE.Vector2(0, 0) },
                     uShake: { value: 0 }
                 },
                 side: THREE.DoubleSide
@@ -711,7 +706,6 @@
             }
             if (window.liquidDiscMat && window.liquidDiscMat.uniforms) {
                 window.liquidDiscMat.uniforms.uTime.value = time;
-                window.liquidDiscMat.uniforms.uLiquidOffset.value.set(liquidOffset.x, liquidOffset.y);
                 window.liquidDiscMat.uniforms.uShake.value = shakeIntensity;
             }
             if (outerBall) outerBall.material.uniforms.uTime.value = time;
