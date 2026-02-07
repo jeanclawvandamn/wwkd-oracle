@@ -60,14 +60,15 @@
             position: fixed;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            width: 340px; height: 340px;
+            width: 200px; height: 200px;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 60px;
+            padding: 20px;
             text-align: center;
             pointer-events: none;
             z-index: 15;
+            transition: left 0.1s ease-out, top 0.1s ease-out;
         }
         .quote-text {
             font-family: 'Bebas Neue', sans-serif;
@@ -91,27 +92,25 @@
         }
         .quote-attr {
             position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, 140px);
+            transform: translate(-50%, 0);
             font-size: 0.7rem;
             letter-spacing: 0.2em;
             color: rgba(255,255,255,0.5);
             opacity: 0;
-            transition: opacity 0.5s ease 0.3s;
+            transition: opacity 0.5s ease 0.3s, left 0.1s ease-out, top 0.1s ease-out;
             z-index: 15;
             pointer-events: none;
         }
         .quote-attr.visible { opacity: 1; }
         .context-badge {
             position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, 170px);
+            transform: translate(-50%, 0);
             font-size: 0.55rem;
             letter-spacing: 0.15em;
             color: rgba(138, 43, 226, 0.6);
             text-transform: uppercase;
             opacity: 0;
-            transition: opacity 0.5s ease 0.5s;
+            transition: opacity 0.5s ease 0.5s, left 0.1s ease-out, top 0.1s ease-out;
             z-index: 15;
             pointer-events: none;
         }
@@ -383,19 +382,23 @@
                 vec3 viewDir = normalize(cameraPosition - vPosition);
                 float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.0);
                 
-                // Glass tint
-                vec3 color = vec3(0.02, 0.02, 0.03);
-                color += vec3(0.1, 0.05, 0.15) * fresnel;
+                // Black tinted glass
+                vec3 color = vec3(0.01, 0.01, 0.01);
                 
-                // Specular
+                // Subtle dark edge highlight
+                color += vec3(0.05, 0.05, 0.06) * fresnel;
+                
+                // Specular highlights - crisp white
                 vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
                 float spec = pow(max(dot(reflect(-lightDir, vNormal), viewDir), 0.0), 64.0);
-                color += vec3(1.0) * spec * 0.5;
+                color += vec3(1.0) * spec * 0.6;
                 
-                // Edge highlight
-                color += vec3(0.3, 0.2, 0.4) * fresnel * 0.3;
+                // Secondary specular
+                vec3 lightDir2 = normalize(vec3(-0.5, 0.8, 0.5));
+                float spec2 = pow(max(dot(reflect(-lightDir2, vNormal), viewDir), 0.0), 32.0);
+                color += vec3(0.8, 0.8, 0.9) * spec2 * 0.3;
                 
-                gl_FragColor = vec4(color, 0.3 + fresnel * 0.4);
+                gl_FragColor = vec4(color, 0.4 + fresnel * 0.3);
             }
         `;
 
@@ -682,6 +685,23 @@
 
             // Stars rotation
             if (stars) stars.rotation.y += 0.0001;
+
+            // Track quote text to window position
+            if (kanyeDisc) {
+                const windowPos = new THREE.Vector3();
+                kanyeDisc.getWorldPosition(windowPos);
+                windowPos.project(camera);
+                
+                const screenX = (windowPos.x * 0.5 + 0.5) * window.innerWidth;
+                const screenY = (-windowPos.y * 0.5 + 0.5) * window.innerHeight;
+                
+                document.querySelector('.quote-container').style.left = screenX + 'px';
+                document.querySelector('.quote-container').style.top = screenY + 'px';
+                document.getElementById('quoteAttr').style.left = screenX + 'px';
+                document.getElementById('quoteAttr').style.top = (screenY + 100) + 'px';
+                document.getElementById('contextBadge').style.left = screenX + 'px';
+                document.getElementById('contextBadge').style.top = (screenY + 125) + 'px';
+            }
 
             renderer.render(scene, camera);
         }
