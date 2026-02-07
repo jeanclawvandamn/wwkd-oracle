@@ -585,28 +585,58 @@
             scene.add(stars);
         }
 
+        // Gyro rotation values
+        let gyroAlpha = 0, gyroBeta = 0, gyroGamma = 0;
+        let gyroEnabled = false;
+
         function initShakeDetection() {
-            if ('DeviceMotionEvent' in window) {
-                if (typeof DeviceMotionEvent.requestPermission === 'function') {
-                    document.body.addEventListener('click', () => {
-                        DeviceMotionEvent.requestPermission().then(r => {
-                            if (r === 'granted') enableShake();
-                        });
-                    }, { once: true });
-                } else {
-                    enableShake();
+            // Request permissions for both motion and orientation
+            if ('DeviceMotionEvent' in window || 'DeviceOrientationEvent' in window) {
+                const requestPerms = async () => {
+                    try {
+                        if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                            await DeviceMotionEvent.requestPermission();
+                        }
+                        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                            await DeviceOrientationEvent.requestPermission();
+                        }
+                        enableGyroAndShake();
+                    } catch (e) {
+                        enableGyroAndShake();
+                    }
+                };
+                document.body.addEventListener('click', requestPerms, { once: true });
+                document.body.addEventListener('touchstart', requestPerms, { once: true });
+                
+                // Try enabling directly for non-iOS devices
+                if (typeof DeviceOrientationEvent.requestPermission !== 'function') {
+                    enableGyroAndShake();
                 }
             }
         }
 
-        function enableShake() {
+        function enableGyroAndShake() {
             document.getElementById('shakeHint').classList.add('visible');
+            gyroEnabled = true;
+            
+            // Gyroscope for ball rotation
+            window.addEventListener('deviceorientation', (e) => {
+                if (e.beta !== null && e.gamma !== null) {
+                    // Beta: front-back tilt (-180 to 180), Gamma: left-right tilt (-90 to 90)
+                    gyroBeta = e.beta || 0;
+                    gyroGamma = e.gamma || 0;
+                    gyroAlpha = e.alpha || 0;
+                }
+            });
+            
+            // Shake detection
             let lastX = 0, lastY = 0, lastZ = 0, shakeCount = 0;
             window.addEventListener('devicemotion', (e) => {
                 const acc = e.accelerationIncludingGravity;
                 if (!acc) return;
                 const d = Math.abs(acc.x - lastX) + Math.abs(acc.y - lastY) + Math.abs(acc.z - lastZ);
                 lastX = acc.x; lastY = acc.y; lastZ = acc.z;
+                
                 if (d > 25) {
                     shakeIntensity = Math.min(1, shakeIntensity + 0.3);
                     shakeCount++;
@@ -661,13 +691,16 @@
             mouse.x += (targetMouse.x - mouse.x) * 0.08;
             mouse.y += (targetMouse.y - mouse.y) * 0.08;
 
-            // Liquid physics - sloshing based on movement
+            // Liquid physics - sloshing based on movement (contained within porthole)
             liquidOffset.x += velocity.x * 0.5;
             liquidOffset.y += velocity.y * 0.5;
-            liquidOffset.x *= 0.95; // Damping
-            liquidOffset.y *= 0.95;
-            velocity.x *= 0.9;
-            velocity.y *= 0.9;
+            liquidOffset.x *= 0.92; // Damping
+            liquidOffset.y *= 0.92;
+            // Clamp to keep liquid visually contained
+            liquidOffset.x = Math.max(-1.5, Math.min(1.5, liquidOffset.x));
+            liquidOffset.y = Math.max(-1.5, Math.min(1.5, liquidOffset.y));
+            velocity.x *= 0.88;
+            velocity.y *= 0.88;
 
             // Update shaders
             if (nebulaMesh) nebulaMesh.material.uniforms.uTime.value = time;
@@ -686,12 +719,27 @@
             // Decay shake
             shakeIntensity *= 0.95;
 
-            // Ball rotation
+            // Ball rotation - gyro or mouse
             if (ballGroup) {
-                const targetRotY = (mouse.x - 0.5) * 0.5;
-                const targetRotX = (mouse.y - 0.5) * 0.3;
-                ballGroup.rotation.y += (targetRotY - ballGroup.rotation.y) * 0.05;
-                ballGroup.rotation.x += (targetRotX - ballGroup.rotation.x) * 0.05;
+                let targetRotY, targetRotX;
+                
+                if (gyroEnabled && (gyroBeta !== 0 || gyroGamma !== 0)) {
+                    // Use gyroscope: gamma = left/right tilt, beta = front/back tilt
+                    // Clamp rotation to keep porthole visible
+                    targetRotY = Math.max(-0.6, Math.min(0.6, (gyroGamma / 90) * 0.8));
+                    targetRotX = Math.max(-0.5, Math.min(0.5, ((gyroBeta - 45) / 90) * 0.6));
+                    
+                    // Add gyro movement to liquid sloshing
+                    velocity.x += (targetRotY - ballGroup.rotation.y) * 0.3;
+                    velocity.y += (targetRotX - ballGroup.rotation.x) * 0.3;
+                } else {
+                    // Use mouse
+                    targetRotY = (mouse.x - 0.5) * 0.5;
+                    targetRotX = (mouse.y - 0.5) * 0.3;
+                }
+                
+                ballGroup.rotation.y += (targetRotY - ballGroup.rotation.y) * 0.08;
+                ballGroup.rotation.x += (targetRotX - ballGroup.rotation.x) * 0.08;
             }
 
             // Stars rotation
