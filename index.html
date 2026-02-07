@@ -544,54 +544,14 @@
             ballGroup.add(liquidDisc);
             window.liquidDiscMat = liquidDiscMat;
 
-            // Kanye window disc (on top of liquid)
-            const kanyeImg = document.getElementById('kanyeImg');
-            const createKanyeDisc = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = 512;
-                canvas.height = 512;
-                const ctx = canvas.getContext('2d');
-                
-                // Transparent background
-                ctx.clearRect(0, 0, 512, 512);
-                
-                // Draw circular clip of Kanye
-                ctx.beginPath();
-                ctx.arc(256, 256, 180, 0, Math.PI * 2);
-                ctx.closePath();
-                ctx.clip();
-                
-                // Draw Kanye's face
-                if (kanyeImg.complete && kanyeImg.naturalWidth > 0) {
-                    ctx.drawImage(kanyeImg, 56, 56, 400, 400);
-                }
-                
-                const texture = new THREE.CanvasTexture(canvas);
-                const discMat = new THREE.MeshBasicMaterial({ 
-                    map: texture, 
-                    transparent: true,
-                    side: THREE.DoubleSide,
-                    depthWrite: false
-                });
-                
-                kanyeDisc = new THREE.Mesh(new THREE.CircleGeometry(0.38, 64), discMat);
-                kanyeDisc.position.z = 1.35;
-                ballGroup.add(kanyeDisc);
-                
-                // Black rim around porthole
-                const rimMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0a, side: THREE.DoubleSide });
-                const rim = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.58, 64), rimMat);
-                rim.position.z = 1.31;
-                ballGroup.add(rim);
-            };
+            // Black rim around porthole (no face, just purple liquid visible)
+            const rimMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0a, side: THREE.DoubleSide });
+            const rim = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.58, 64), rimMat);
+            rim.position.z = 1.31;
+            ballGroup.add(rim);
             
-            if (kanyeImg.complete) {
-                createKanyeDisc();
-            } else {
-                kanyeImg.onload = createKanyeDisc;
-                kanyeImg.onerror = createKanyeDisc;
-                setTimeout(createKanyeDisc, 1000); // Fallback timeout
-            }
+            // Reference for tracking (use liquidDisc position)
+            kanyeDisc = liquidDisc;
 
             // Stars
             createStars();
