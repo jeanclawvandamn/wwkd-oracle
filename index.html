@@ -227,6 +227,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             white-space: nowrap;
+            min-width: 120px;
         }
 
         .shake-btn:hover {
@@ -234,10 +235,8 @@
             box-shadow: 0 5px 30px rgba(138, 43, 226, 0.5);
         }
 
-        .shake-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
+        .shake-btn.reset-mode {
+            background: linear-gradient(135deg, #4a0080, #2a0050);
         }
 
         .hint {
@@ -246,34 +245,6 @@
             font-size: 0.7rem;
             color: #444;
             letter-spacing: 0.1em;
-        }
-
-        /* Reset button */
-        .reset-btn {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            font-size: 0.7rem;
-            letter-spacing: 0.15em;
-            background: transparent;
-            border: 1px solid #333;
-            color: #555;
-            cursor: pointer;
-            z-index: 20;
-            opacity: 0;
-            transition: all 0.3s ease;
-            pointer-events: none;
-        }
-
-        .reset-btn.visible {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .reset-btn:hover {
-            border-color: #666;
-            color: #fff;
         }
 
         /* Shake animation for the orb */
@@ -336,13 +307,11 @@
             <label class="input-label">WHAT TROUBLES YOU?</label>
             <div class="input-row">
                 <input type="text" id="issueInput" placeholder="Speak your truth..." maxlength="200">
-                <button class="shake-btn" id="shakeBtn" onclick="seekWisdom()">SHAKE</button>
+                <button class="shake-btn" id="shakeBtn" onclick="handleButtonClick()">SHAKE</button>
             </div>
             <p class="hint" id="hintText">Press Enter, tap the orb, or shake your phone</p>
         </div>
     </div>
-
-    <button class="reset-btn" id="resetBtn" onclick="reset()">ASK AGAIN</button>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
@@ -895,6 +864,27 @@
 
         // Wisdom logic
         let isSeeking = false;
+        let isResetMode = false;
+
+        function handleButtonClick() {
+            if (isResetMode) {
+                reset();
+            } else {
+                seekWisdom();
+            }
+        }
+
+        function setButtonMode(resetMode) {
+            const btn = document.getElementById('shakeBtn');
+            isResetMode = resetMode;
+            if (resetMode) {
+                btn.textContent = 'ASK AGAIN';
+                btn.classList.add('reset-mode');
+            } else {
+                btn.textContent = 'SHAKE';
+                btn.classList.remove('reset-mode');
+            }
+        }
 
         async function seekWisdom() {
             if (isSeeking) return;
@@ -917,9 +907,6 @@
             const quoteText = document.getElementById('quoteText');
             const quoteAttr = document.getElementById('quoteAttr');
             const contextBadge = document.getElementById('contextBadge');
-            const btn = document.getElementById('shakeBtn');
-            
-            btn.disabled = true;
             quoteText.classList.remove('visible');
             quoteAttr.classList.remove('visible');
             contextBadge.classList.remove('visible');
@@ -951,7 +938,7 @@
                         contextBadge.classList.add('visible');
                     }
                     
-                    document.getElementById('resetBtn').classList.add('visible');
+                    setButtonMode(true);
                 } else {
                     throw new Error('API unavailable');
                 }
@@ -975,7 +962,7 @@
                 quoteText.classList.add('visible');
                 quoteAttr.classList.add('visible');
                 
-                document.getElementById('resetBtn').classList.add('visible');
+                setButtonMode(true);
             }
         }
 
@@ -987,9 +974,8 @@
             document.getElementById('quoteText').classList.add('visible');
             document.getElementById('quoteAttr').classList.remove('visible');
             document.getElementById('contextBadge').classList.remove('visible');
-            document.getElementById('resetBtn').classList.remove('visible');
-            document.getElementById('shakeBtn').disabled = false;
             document.getElementById('issueInput').value = '';
+            setButtonMode(false);
         }
 
         document.getElementById('issueInput').addEventListener('keydown', (e) => {
