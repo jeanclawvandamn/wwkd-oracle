@@ -225,8 +225,7 @@
 
     <!-- Kanye image for texture -->
     <img id="kanyeImg" crossorigin="anonymous" style="display:none" 
-         src="https://i.ibb.co/4g8XJHZ/kanye-west.jpg" 
-         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22400%22><rect fill=%22%231a1a3e%22 width=%22400%22 height=%22400%22/><text x=%22200%22 y=%22220%22 font-size=%22150%22 fill=%22white%22 text-anchor=%22middle%22 font-family=%22Arial%22>YE</text></svg>'">
+         src="/kanye_face.jpg">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
@@ -562,18 +561,9 @@
                 ctx.closePath();
                 ctx.clip();
                 
-                // Draw the image or fallback
+                // Draw Kanye's face
                 if (kanyeImg.complete && kanyeImg.naturalWidth > 0) {
                     ctx.drawImage(kanyeImg, 56, 56, 400, 400);
-                } else {
-                    // Fallback YE text
-                    ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 160px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.shadowColor = '#000';
-                    ctx.shadowBlur = 15;
-                    ctx.fillText('YE', 256, 256);
                 }
                 
                 const texture = new THREE.CanvasTexture(canvas);
