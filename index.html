@@ -30,7 +30,6 @@
             z-index: 1;
         }
 
-        /* Header - positioned at TOP */
         .header {
             position: fixed;
             top: 25px;
@@ -75,7 +74,6 @@
             75% { transform: translateX(3px); }
         }
 
-        /* Quote display - centered on the orb */
         .quote-container {
             position: fixed;
             top: 50%;
@@ -140,7 +138,6 @@
             opacity: 1;
         }
 
-        /* Context badge */
         .context-badge {
             position: fixed;
             top: 50%;
@@ -160,7 +157,6 @@
             opacity: 1;
         }
 
-        /* Input panel */
         .input-panel {
             position: fixed;
             bottom: 30px;
@@ -247,7 +243,6 @@
             letter-spacing: 0.1em;
         }
 
-        /* Shake animation for the orb */
         @keyframes orb-shake {
             0%, 100% { transform: translateX(0) translateY(0); }
             10% { transform: translateX(-8px) translateY(-3px); }
@@ -265,7 +260,6 @@
             animation: orb-shake 0.6s ease-out;
         }
 
-        /* Mobile */
         @media (max-width: 500px) {
             .input-row {
                 flex-direction: column;
@@ -316,7 +310,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         // Three.js setup
-        let scene, camera, renderer, sphere, uniforms, stars, nebulaMesh;
+        let scene, camera, renderer, eightBall, stars, nebulaMesh, kanyeWindow;
+        let ballGroup;
         let mouse = { x: 0.5, y: 0.5 };
         let targetMouse = { x: 0.5, y: 0.5 };
         let isHovering = false;
@@ -324,6 +319,10 @@
         let time = 0;
         let shakeEnabled = false;
         let lastShakeTime = 0;
+        let shakeIntensity = 0;
+
+        // Kanye face image (base64 encoded simple iconic silhouette)
+        const kanyeImageUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Kanye_West_at_the_2009_Tribeca_Film_Festival_%28crop_2%29.jpg/220px-Kanye_West_at_the_2009_Tribeca_Film_Festival_%28crop_2%29.jpg';
 
         // Background nebula shader
         const nebulaVertexShader = `
@@ -339,7 +338,6 @@
             uniform vec2 uMouse;
             varying vec2 vUv;
             
-            // Simplex noise functions
             vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -400,8 +398,6 @@
             void main() {
                 vec2 uv = vUv;
                 vec2 p = uv * 2.0 - 1.0;
-                
-                // Animated nebula clouds
                 float t = uTime * 0.05;
                 vec3 pos = vec3(p * 1.5, t);
                 
@@ -409,33 +405,27 @@
                 float n2 = fbm(pos * 2.0 + vec3(100.0, 0.0, t * 0.3));
                 float n3 = fbm(pos * 0.5 + vec3(0.0, 100.0, t * 0.2));
                 
-                // Color palette - deep space purples and blues
-                vec3 color1 = vec3(0.1, 0.0, 0.15);  // Deep purple
-                vec3 color2 = vec3(0.05, 0.0, 0.1);  // Darker purple
-                vec3 color3 = vec3(0.15, 0.05, 0.2); // Mid purple
-                vec3 color4 = vec3(0.0, 0.02, 0.08); // Deep blue
-                vec3 color5 = vec3(0.2, 0.1, 0.3);   // Bright purple accent
+                vec3 color1 = vec3(0.1, 0.0, 0.15);
+                vec3 color2 = vec3(0.05, 0.0, 0.1);
+                vec3 color3 = vec3(0.15, 0.05, 0.2);
+                vec3 color4 = vec3(0.0, 0.02, 0.08);
+                vec3 color5 = vec3(0.2, 0.1, 0.3);
                 
-                // Mix colors based on noise
                 vec3 color = color1;
                 color = mix(color, color2, smoothstep(-0.5, 0.5, n1));
                 color = mix(color, color3, smoothstep(-0.3, 0.7, n2) * 0.5);
                 color = mix(color, color4, smoothstep(-0.2, 0.6, n3) * 0.3);
                 
-                // Add bright nebula wisps
                 float wisp = smoothstep(0.3, 0.8, n1 * n2);
                 color += color5 * wisp * 0.3;
                 
-                // Subtle mouse interaction - create a glow where mouse is
                 float mouseDist = length(uv - uMouse);
                 float mouseGlow = smoothstep(0.5, 0.0, mouseDist) * 0.15;
                 color += vec3(0.3, 0.1, 0.5) * mouseGlow;
                 
-                // Vignette
                 float vignette = 1.0 - length(p) * 0.4;
                 color *= vignette;
                 
-                // Add some subtle grain
                 float grain = (snoise(vec3(uv * 500.0, uTime)) * 0.5 + 0.5) * 0.03;
                 color += grain;
                 
@@ -443,49 +433,42 @@
             }
         `;
 
-        // Orb vertex shader
-        const vertexShader = `
+        // 8-Ball shader - glossy black with window cutout
+        const eightBallVertexShader = `
             varying vec2 vUv;
             varying vec3 vNormal;
             varying vec3 vPosition;
+            varying vec3 vWorldPosition;
             
             uniform float uTime;
-            uniform float uHover;
-            uniform vec2 uMouse;
             uniform float uShake;
             
             void main() {
                 vUv = uv;
                 vNormal = normalize(normalMatrix * normal);
                 vPosition = position;
+                vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
                 
                 vec3 pos = position;
                 
-                // Shake distortion
                 if (uShake > 0.0) {
-                    float shake = sin(uTime * 30.0) * uShake * 0.05;
+                    float shake = sin(uTime * 30.0) * uShake * 0.03;
                     pos.x += shake;
-                    pos.y += cos(uTime * 25.0) * uShake * 0.03;
+                    pos.y += cos(uTime * 25.0) * uShake * 0.02;
                 }
                 
-                // Subtle vertex displacement on hover
-                float dist = distance(uv, uMouse);
-                float wave = sin(dist * 10.0 - uTime * 3.0) * 0.02 * uHover;
-                pos += normal * wave;
-                
-                // Breathing effect
-                float breath = sin(uTime * 0.5) * 0.01;
+                float breath = sin(uTime * 0.5) * 0.005;
                 pos *= 1.0 + breath;
                 
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
             }
         `;
 
-        // Orb fragment shader
-        const fragmentShader = `
+        const eightBallFragmentShader = `
             varying vec2 vUv;
             varying vec3 vNormal;
             varying vec3 vPosition;
+            varying vec3 vWorldPosition;
             
             uniform float uTime;
             uniform float uHover;
@@ -493,90 +476,95 @@
             uniform float uShake;
             uniform vec2 uMouse;
             
-            vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-            vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-            vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
-            vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
-            
-            float snoise(vec3 v) {
-                const vec2 C = vec2(1.0/6.0, 1.0/3.0);
-                const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-                vec3 i = floor(v + dot(v, C.yyy));
-                vec3 x0 = v - i + dot(i, C.xxx);
-                vec3 g = step(x0.yzx, x0.xyz);
-                vec3 l = 1.0 - g;
-                vec3 i1 = min(g.xyz, l.zxy);
-                vec3 i2 = max(g.xyz, l.zxy);
-                vec3 x1 = x0 - i1 + C.xxx;
-                vec3 x2 = x0 - i2 + C.yyy;
-                vec3 x3 = x0 - D.yyy;
-                i = mod289(i);
-                vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-                float n_ = 0.142857142857;
-                vec3 ns = n_ * D.wyz - D.xzx;
-                vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-                vec4 x_ = floor(j * ns.z);
-                vec4 y_ = floor(j - 7.0 * x_);
-                vec4 x = x_ *ns.x + ns.yyyy;
-                vec4 y = y_ *ns.x + ns.yyyy;
-                vec4 h = 1.0 - abs(x) - abs(y);
-                vec4 b0 = vec4(x.xy, y.xy);
-                vec4 b1 = vec4(x.zw, y.zw);
-                vec4 s0 = floor(b0)*2.0 + 1.0;
-                vec4 s1 = floor(b1)*2.0 + 1.0;
-                vec4 sh = -step(h, vec4(0.0));
-                vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
-                vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
-                vec3 p0 = vec3(a0.xy, h.x);
-                vec3 p1 = vec3(a0.zw, h.y);
-                vec3 p2 = vec3(a1.xy, h.z);
-                vec3 p3 = vec3(a1.zw, h.w);
-                vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
-                p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
-                vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
-                m = m * m;
-                return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+            void main() {
+                // Glossy black base
+                vec3 baseColor = vec3(0.02, 0.02, 0.03);
+                
+                // Fresnel for edge highlight
+                vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+                float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 4.0);
+                
+                // Specular highlights for glossy look
+                vec3 lightDir1 = normalize(vec3(1.0, 1.0, 1.0));
+                vec3 lightDir2 = normalize(vec3(-0.5, 0.5, 0.8));
+                vec3 reflectDir1 = reflect(-lightDir1, vNormal);
+                vec3 reflectDir2 = reflect(-lightDir2, vNormal);
+                
+                float spec1 = pow(max(dot(viewDir, reflectDir1), 0.0), 64.0);
+                float spec2 = pow(max(dot(viewDir, reflectDir2), 0.0), 32.0);
+                
+                vec3 color = baseColor;
+                
+                // Add purple tint to edge
+                color += vec3(0.1, 0.0, 0.15) * fresnel * 0.5;
+                
+                // Specular highlights
+                color += vec3(1.0) * spec1 * 0.6;
+                color += vec3(0.8, 0.7, 1.0) * spec2 * 0.3;
+                
+                // Subtle purple glow when active
+                float activeGlow = max(uActive, uShake);
+                color += vec3(0.3, 0.1, 0.5) * activeGlow * 0.2 * (sin(uTime * 3.0) * 0.5 + 0.5);
+                
+                // Edge glow
+                color += vec3(0.2, 0.1, 0.3) * fresnel * 0.3;
+                
+                gl_FragColor = vec4(color, 1.0);
             }
+        `;
+
+        // Window shader with Kanye texture
+        const windowVertexShader = `
+            varying vec2 vUv;
+            varying vec3 vNormal;
             
             void main() {
-                vec3 deepPurple = vec3(0.1, 0.0, 0.2);
-                vec3 darkBlue = vec3(0.0, 0.0, 0.1);
-                vec3 highlight = vec3(0.5, 0.2, 0.8);
-                vec3 glow = vec3(0.6, 0.3, 1.0);
+                vUv = uv;
+                vNormal = normalize(normalMatrix * normal);
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `;
+
+        const windowFragmentShader = `
+            varying vec2 vUv;
+            varying vec3 vNormal;
+            
+            uniform sampler2D uTexture;
+            uniform float uTime;
+            uniform float uActive;
+            
+            void main() {
+                vec2 uv = vUv;
                 
-                vec3 viewDir = normalize(cameraPosition - vPosition);
-                float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.0);
+                // Circular mask
+                vec2 center = vec2(0.5, 0.5);
+                float dist = length(uv - center);
                 
-                float noise = snoise(vPosition * 3.0 + uTime * 0.2) * 0.5 + 0.5;
-                float noise2 = snoise(vPosition * 5.0 - uTime * 0.3) * 0.5 + 0.5;
-                
-                float mouseDist = distance(vUv, uMouse);
-                float ripple = sin(mouseDist * 20.0 - uTime * 4.0) * 0.5 + 0.5;
-                ripple *= smoothstep(0.5, 0.0, mouseDist) * uHover;
-                
-                vec3 color = mix(deepPurple, darkBlue, noise);
-                color = mix(color, highlight, noise2 * 0.3);
-                color += fresnel * glow * (0.5 + uHover * 0.5);
-                color += ripple * highlight * 0.5;
-                
-                // Active/shake glow
-                float activeGlow = max(uActive, uShake);
-                color += glow * activeGlow * 0.4 * (sin(uTime * 5.0) * 0.5 + 0.5);
-                
-                // Extra energy during shake
-                if (uShake > 0.0) {
-                    float energy = sin(uTime * 20.0) * 0.5 + 0.5;
-                    color += vec3(0.8, 0.4, 1.0) * energy * uShake * 0.3;
+                if (dist > 0.48) {
+                    // White rim
+                    if (dist < 0.5) {
+                        gl_FragColor = vec4(0.9, 0.9, 0.95, 1.0);
+                    } else {
+                        discard;
+                    }
+                    return;
                 }
                 
-                vec3 lightDir = normalize(vec3(uMouse.x - 0.5, uMouse.y - 0.5, 1.0));
-                float spec = pow(max(dot(reflect(-lightDir, vNormal), viewDir), 0.0), 32.0);
-                color += vec3(1.0) * spec * 0.5 * (1.0 + uHover);
+                // Sample Kanye texture
+                vec4 texColor = texture2D(uTexture, uv);
                 
-                float vignette = 1.0 - fresnel * 0.3;
+                // Add subtle blue/purple tint like 8-ball liquid
+                vec3 tint = vec3(0.7, 0.75, 0.9);
+                vec3 color = texColor.rgb * tint;
+                
+                // Subtle glow effect when active
+                color += vec3(0.1, 0.05, 0.2) * uActive * (sin(uTime * 2.0) * 0.5 + 0.5);
+                
+                // Vignette inside the window
+                float vignette = 1.0 - dist * 0.5;
                 color *= vignette;
                 
-                gl_FragColor = vec4(color, 0.95);
+                gl_FragColor = vec4(color, 1.0);
             }
         `;
 
@@ -591,7 +579,7 @@
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.getElementById('canvas-container').appendChild(renderer.domElement);
             
-            // Background nebula plane
+            // Background nebula
             const nebulaGeometry = new THREE.PlaneGeometry(20, 20);
             const nebulaMaterial = new THREE.ShaderMaterial({
                 vertexShader: nebulaVertexShader,
@@ -605,28 +593,73 @@
             nebulaMesh.position.z = -5;
             scene.add(nebulaMesh);
             
-            // Orb uniforms
-            uniforms = {
-                uTime: { value: 0 },
-                uHover: { value: 0 },
-                uActive: { value: 0 },
-                uShake: { value: 0 },
-                uMouse: { value: new THREE.Vector2(0.5, 0.5) }
-            };
+            // Create ball group for rotation
+            ballGroup = new THREE.Group();
+            scene.add(ballGroup);
             
-            // Orb
-            const geometry = new THREE.SphereGeometry(1.3, 128, 128);
-            const material = new THREE.ShaderMaterial({
-                vertexShader,
-                fragmentShader,
-                uniforms,
+            // 8-Ball sphere
+            const ballGeometry = new THREE.SphereGeometry(1.3, 64, 64);
+            const ballMaterial = new THREE.ShaderMaterial({
+                vertexShader: eightBallVertexShader,
+                fragmentShader: eightBallFragmentShader,
+                uniforms: {
+                    uTime: { value: 0 },
+                    uHover: { value: 0 },
+                    uActive: { value: 0 },
+                    uShake: { value: 0 },
+                    uMouse: { value: new THREE.Vector2(0.5, 0.5) }
+                }
+            });
+            eightBall = new THREE.Mesh(ballGeometry, ballMaterial);
+            ballGroup.add(eightBall);
+            
+            // Kanye window (circular disc on front of ball)
+            const loader = new THREE.TextureLoader();
+            loader.crossOrigin = 'anonymous';
+            
+            // Create window with placeholder, update when texture loads
+            const windowGeometry = new THREE.CircleGeometry(0.55, 64);
+            const windowMaterial = new THREE.ShaderMaterial({
+                vertexShader: windowVertexShader,
+                fragmentShader: windowFragmentShader,
+                uniforms: {
+                    uTexture: { value: null },
+                    uTime: { value: 0 },
+                    uActive: { value: 0 }
+                },
                 transparent: true
             });
             
-            sphere = new THREE.Mesh(geometry, material);
-            scene.add(sphere);
+            kanyeWindow = new THREE.Mesh(windowGeometry, windowMaterial);
+            kanyeWindow.position.z = 1.15; // Slightly in front of ball surface
+            ballGroup.add(kanyeWindow);
             
-            // Stars
+            // Load Kanye texture
+            loader.load(
+                kanyeImageUrl,
+                (texture) => {
+                    texture.minFilter = THREE.LinearFilter;
+                    windowMaterial.uniforms.uTexture.value = texture;
+                },
+                undefined,
+                (err) => {
+                    console.log('Using fallback for Kanye texture');
+                    // Create a canvas-based fallback
+                    createFallbackTexture(windowMaterial);
+                }
+            );
+            
+            // Add white rim ring around window
+            const rimGeometry = new THREE.RingGeometry(0.53, 0.6, 64);
+            const rimMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xf0f0f5,
+                side: THREE.DoubleSide
+            });
+            const rim = new THREE.Mesh(rimGeometry, rimMaterial);
+            rim.position.z = 1.14;
+            ballGroup.add(rim);
+            
+            // Create stars
             createStars();
             
             // Events
@@ -635,15 +668,35 @@
             renderer.domElement.addEventListener('click', onSphereClick);
             renderer.domElement.addEventListener('mouseenter', () => isHovering = true);
             renderer.domElement.addEventListener('mouseleave', () => isHovering = false);
-            
-            // Touch support
             renderer.domElement.addEventListener('touchmove', onTouchMove);
             renderer.domElement.addEventListener('touchstart', onSphereClick);
             
-            // Initialize shake detection
             initShakeDetection();
-            
             animate();
+        }
+
+        function createFallbackTexture(material) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            
+            // Blue gradient background like 8-ball liquid
+            const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+            gradient.addColorStop(0, '#1a1a3e');
+            gradient.addColorStop(1, '#0a0a1a');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 256, 256);
+            
+            // Draw stylized Ye silhouette
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 120px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('YE', 128, 128);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            material.uniforms.uTexture.value = texture;
         }
 
         function createStars() {
@@ -697,7 +750,6 @@
                         float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
                         float twinkle = sin(uTime * 3.0 + vTwinkle * 6.28) * 0.5 + 0.5;
                         vec3 color = mix(vec3(0.9, 0.95, 1.0), vec3(0.7, 0.8, 1.0), twinkle * 0.3);
-                        color += vec3(0.1, 0.1, 0.2) * (1.0 - dist * 2.0);
                         gl_FragColor = vec4(color, alpha * 0.9);
                     }
                 `,
@@ -710,16 +762,12 @@
             scene.add(stars);
         }
 
-        // Shake detection using DeviceMotion API
         function initShakeDetection() {
             if ('DeviceMotionEvent' in window) {
-                // Check if we need permission (iOS 13+)
                 if (typeof DeviceMotionEvent.requestPermission === 'function') {
-                    // We'll request permission when user first interacts
                     document.body.addEventListener('click', requestMotionPermission, { once: true });
                     document.body.addEventListener('touchstart', requestMotionPermission, { once: true });
                 } else {
-                    // Android and older iOS - just add listener
                     enableShakeDetection();
                 }
             }
@@ -749,7 +797,7 @@
                 if (!acc) return;
                 
                 const now = Date.now();
-                if (now - lastShakeCheck < 100) return; // Throttle
+                if (now - lastShakeCheck < 100) return;
                 lastShakeCheck = now;
                 
                 const deltaX = Math.abs(acc.x - lastX);
@@ -762,11 +810,8 @@
                 
                 if (deltaX > shakeThreshold || deltaY > shakeThreshold || deltaZ > shakeThreshold) {
                     shakeCount++;
+                    shakeIntensity = 1.0;
                     
-                    // Visual feedback
-                    uniforms.uShake.value = 1.0;
-                    
-                    // Trigger wisdom after sustained shake
                     if (shakeCount >= 3 && now - lastShakeTime > 2000) {
                         lastShakeTime = now;
                         shakeCount = 0;
@@ -779,11 +824,9 @@
         }
 
         function triggerShakeWisdom() {
-            // Haptic feedback if available
             if ('vibrate' in navigator) {
                 navigator.vibrate([100, 50, 100]);
             }
-            
             seekWisdom();
         }
 
@@ -821,9 +864,8 @@
             requestAnimationFrame(animate);
             
             time += 0.016;
-            uniforms.uTime.value = time;
             
-            // Update nebula background
+            // Update nebula
             if (nebulaMesh && nebulaMesh.material.uniforms) {
                 nebulaMesh.material.uniforms.uTime.value = time;
                 nebulaMesh.material.uniforms.uMouse.value.set(mouse.x, mouse.y);
@@ -833,31 +875,40 @@
             if (stars && stars.material.uniforms) {
                 stars.material.uniforms.uTime.value = time;
             }
-            
             if (stars) {
                 stars.rotation.y += 0.0001;
-                stars.rotation.x += 0.00005;
             }
+            
+            // Update 8-ball
+            if (eightBall && eightBall.material.uniforms) {
+                eightBall.material.uniforms.uTime.value = time;
+                eightBall.material.uniforms.uHover.value += ((isHovering ? 1 : 0) - eightBall.material.uniforms.uHover.value) * 0.1;
+                eightBall.material.uniforms.uActive.value += ((isActive ? 1 : 0) - eightBall.material.uniforms.uActive.value) * 0.1;
+                eightBall.material.uniforms.uShake.value = shakeIntensity;
+            }
+            
+            // Update window
+            if (kanyeWindow && kanyeWindow.material.uniforms) {
+                kanyeWindow.material.uniforms.uTime.value = time;
+                kanyeWindow.material.uniforms.uActive.value = isActive ? 1 : 0;
+            }
+            
+            // Decay shake
+            shakeIntensity *= 0.95;
             
             // Smooth mouse
             mouse.x += (targetMouse.x - mouse.x) * 0.05;
             mouse.y += (targetMouse.y - mouse.y) * 0.05;
-            uniforms.uMouse.value.set(mouse.x, mouse.y);
             
-            // Hover state
-            const targetHover = isHovering ? 1 : 0;
-            uniforms.uHover.value += (targetHover - uniforms.uHover.value) * 0.1;
-            
-            // Active state
-            const targetActive = isActive ? 1 : 0;
-            uniforms.uActive.value += (targetActive - uniforms.uActive.value) * 0.1;
-            
-            // Shake decay
-            uniforms.uShake.value *= 0.95;
-            
-            // Sphere rotation
-            sphere.rotation.y += (mouse.x - 0.5) * 0.01;
-            sphere.rotation.x += (mouse.y - 0.5) * 0.01;
+            // Subtle ball rotation following mouse
+            if (ballGroup) {
+                ballGroup.rotation.y += (mouse.x - 0.5) * 0.02;
+                ballGroup.rotation.x += (mouse.y - 0.5) * 0.01;
+                
+                // Clamp rotation so window stays visible
+                ballGroup.rotation.y = Math.max(-0.4, Math.min(0.4, ballGroup.rotation.y));
+                ballGroup.rotation.x = Math.max(-0.3, Math.min(0.3, ballGroup.rotation.x));
+            }
             
             renderer.render(scene, camera);
         }
@@ -892,7 +943,6 @@
             const issue = document.getElementById('issueInput').value.trim();
             if (!issue) {
                 document.getElementById('issueInput').focus();
-                // Shake the input to indicate it's required
                 document.querySelector('.input-wrapper').style.animation = 'orb-shake 0.5s ease-out';
                 setTimeout(() => {
                     document.querySelector('.input-wrapper').style.animation = '';
@@ -902,11 +952,12 @@
 
             isSeeking = true;
             isActive = true;
-            uniforms.uShake.value = 1.0;
+            shakeIntensity = 1.0;
             
             const quoteText = document.getElementById('quoteText');
             const quoteAttr = document.getElementById('quoteAttr');
             const contextBadge = document.getElementById('contextBadge');
+            
             quoteText.classList.remove('visible');
             quoteAttr.classList.remove('visible');
             contextBadge.classList.remove('visible');
