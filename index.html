@@ -297,7 +297,7 @@
     </div>
     
     <div class="quote-container">
-        <p class="quote-text visible" id="quoteText">ASK AND<br>YOU SHALL<br>RECEIVE</p>
+        <p class="quote-text visible" id="quoteText">ASK AND<br>YE SHALL<br>RECEIVE</p>
     </div>
     <p class="quote-attr" id="quoteAttr">— KANYE WEST</p>
     <p class="context-badge" id="contextBadge"></p>
@@ -307,7 +307,7 @@
             <label class="input-label">WHAT TROUBLES YOU?</label>
             <div class="input-row">
                 <input type="text" id="issueInput" placeholder="Speak your truth..." maxlength="200">
-                <button class="shake-btn" id="shakeBtn" onclick="handleButtonClick()">SHAKE DEVICE</button>
+                <button class="shake-btn" id="shakeBtn" onclick="handleButtonClick()">PRESS (OR SHAKE DEVICE)</button>
             </div>
             <p class="hint" id="hintText">Press Enter, tap the orb, or shake your phone</p>
         </div>
@@ -881,7 +881,7 @@
                 btn.textContent = 'ASK YE AGAIN';
                 btn.classList.add('reset-mode');
             } else {
-                btn.textContent = 'SHAKE DEVICE';
+                btn.textContent = 'PRESS (OR SHAKE DEVICE)';
                 btn.classList.remove('reset-mode');
             }
         }
@@ -970,7 +970,7 @@
             isSeeking = false;
             isActive = false;
             
-            document.getElementById('quoteText').textContent = 'ASK AND\nYOU SHALL\nRECEIVE';
+            document.getElementById('quoteText').textContent = 'ASK AND\nYE SHALL\nRECEIVE';
             document.getElementById('quoteText').classList.add('visible');
             document.getElementById('quoteAttr').classList.remove('visible');
             document.getElementById('contextBadge').classList.remove('visible');
