@@ -382,23 +382,24 @@
                 vec3 viewDir = normalize(cameraPosition - vPosition);
                 float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.0);
                 
-                // Black tinted glass
-                vec3 color = vec3(0.01, 0.01, 0.01);
+                // Solid black ball
+                vec3 color = vec3(0.02, 0.02, 0.02);
                 
-                // Subtle dark edge highlight
-                color += vec3(0.05, 0.05, 0.06) * fresnel;
+                // Subtle edge definition
+                color += vec3(0.03, 0.03, 0.03) * fresnel;
                 
-                // Specular highlights - crisp white
+                // Specular highlights - crisp white for glossy 8-ball look
                 vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
                 float spec = pow(max(dot(reflect(-lightDir, vNormal), viewDir), 0.0), 64.0);
-                color += vec3(1.0) * spec * 0.6;
+                color += vec3(1.0) * spec * 0.7;
                 
                 // Secondary specular
                 vec3 lightDir2 = normalize(vec3(-0.5, 0.8, 0.5));
                 float spec2 = pow(max(dot(reflect(-lightDir2, vNormal), viewDir), 0.0), 32.0);
-                color += vec3(0.8, 0.8, 0.9) * spec2 * 0.3;
+                color += vec3(0.9, 0.9, 0.95) * spec2 * 0.4;
                 
-                gl_FragColor = vec4(color, 0.4 + fresnel * 0.3);
+                // Fully opaque
+                gl_FragColor = vec4(color, 1.0);
             }
         `;
 
@@ -461,19 +462,8 @@
             ballGroup = new THREE.Group();
             scene.add(ballGroup);
 
-            // Inner purple liquid sphere
-            const liquidMat = new THREE.ShaderMaterial({
-                vertexShader: liquidVertexShader,
-                fragmentShader: liquidFragmentShader,
-                uniforms: {
-                    uTime: { value: 0 },
-                    uLiquidOffset: { value: new THREE.Vector2(0, 0) },
-                    uShake: { value: 0 }
-                },
-                transparent: true
-            });
-            innerLiquid = new THREE.Mesh(new THREE.SphereGeometry(1.15, 64, 64), liquidMat);
-            ballGroup.add(innerLiquid);
+            // Inner liquid reference (not added, liquid is in window disc now)
+            innerLiquid = null;
 
             // Outer glass shell
             const glassMat = new THREE.ShaderMaterial({
@@ -486,6 +476,83 @@
             outerBall = new THREE.Mesh(new THREE.SphereGeometry(1.3, 64, 64), glassMat);
             ballGroup.add(outerBall);
 
+            // Purple liquid window shader
+            const windowLiquidShader = {
+                vertexShader: `
+                    varying vec2 vUv;
+                    uniform float uTime;
+                    uniform vec2 uLiquidOffset;
+                    void main() {
+                        vUv = uv;
+                        vec3 pos = position;
+                        // Subtle wobble
+                        pos.x += sin(uTime * 2.0 + position.y * 5.0 + uLiquidOffset.x * 3.0) * 0.01;
+                        pos.y += cos(uTime * 1.5 + position.x * 5.0 + uLiquidOffset.y * 3.0) * 0.01;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    varying vec2 vUv;
+                    uniform float uTime;
+                    uniform float uShake;
+                    uniform vec2 uLiquidOffset;
+                    
+                    ${noiseGLSL}
+                    
+                    void main() {
+                        vec2 uv = vUv;
+                        vec2 center = vec2(0.5);
+                        float dist = length(uv - center);
+                        
+                        // Circular mask
+                        if (dist > 0.5) discard;
+                        
+                        // Animated purple liquid
+                        vec3 p = vec3(uv * 3.0 + uLiquidOffset, uTime * 0.3);
+                        float n1 = snoise(p) * 0.5 + 0.5;
+                        float n2 = snoise(p * 2.0 + 100.0) * 0.5 + 0.5;
+                        
+                        vec3 purple1 = vec3(0.35, 0.1, 0.55);
+                        vec3 purple2 = vec3(0.2, 0.05, 0.35);
+                        vec3 purple3 = vec3(0.5, 0.25, 0.75);
+                        
+                        vec3 color = mix(purple1, purple2, n1);
+                        color = mix(color, purple3, n2 * 0.4);
+                        
+                        // Depth/vignette
+                        color *= 1.0 - dist * 0.5;
+                        
+                        // Shake glow
+                        color += vec3(0.3, 0.15, 0.5) * uShake * (sin(uTime * 8.0) * 0.5 + 0.5);
+                        
+                        // Subtle highlights
+                        float highlight = pow(1.0 - dist, 3.0) * 0.3;
+                        color += vec3(0.6, 0.4, 0.8) * highlight;
+                        
+                        gl_FragColor = vec4(color, 1.0);
+                    }
+                `
+            };
+
+            // Purple liquid disc (background of window)
+            const liquidDiscMat = new THREE.ShaderMaterial({
+                vertexShader: windowLiquidShader.vertexShader,
+                fragmentShader: windowLiquidShader.fragmentShader,
+                uniforms: {
+                    uTime: { value: 0 },
+                    uShake: { value: 0 },
+                    uLiquidOffset: { value: new THREE.Vector2(0, 0) }
+                },
+                transparent: true,
+                side: THREE.DoubleSide
+            });
+            const liquidDisc = new THREE.Mesh(new THREE.CircleGeometry(0.48, 64), liquidDiscMat);
+            liquidDisc.position.z = 1.18;
+            ballGroup.add(liquidDisc);
+            
+            // Store reference for animation
+            window.liquidDiscMat = liquidDiscMat;
+
             // Kanye window disc
             const kanyeImg = document.getElementById('kanyeImg');
             const createKanyeDisc = () => {
@@ -494,47 +561,44 @@
                 canvas.height = 512;
                 const ctx = canvas.getContext('2d');
                 
+                // Transparent background
+                ctx.clearRect(0, 0, 512, 512);
+                
                 // Draw circular clip of Kanye
                 ctx.beginPath();
-                ctx.arc(256, 256, 250, 0, Math.PI * 2);
+                ctx.arc(256, 256, 200, 0, Math.PI * 2);
                 ctx.closePath();
                 ctx.clip();
                 
                 // Draw the image or fallback
                 if (kanyeImg.complete && kanyeImg.naturalWidth > 0) {
-                    ctx.drawImage(kanyeImg, 0, 0, 512, 512);
+                    ctx.drawImage(kanyeImg, 28, 28, 456, 456);
                 } else {
-                    // Fallback YE text
-                    const grad = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
-                    grad.addColorStop(0, '#2a1a4a');
-                    grad.addColorStop(1, '#0a0515');
-                    ctx.fillStyle = grad;
-                    ctx.fillRect(0, 0, 512, 512);
+                    // Fallback YE text on transparent
                     ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 200px Arial';
+                    ctx.font = 'bold 180px Arial';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
+                    ctx.shadowColor = '#000';
+                    ctx.shadowBlur = 10;
                     ctx.fillText('YE', 256, 256);
                 }
-                
-                // Add subtle overlay
-                ctx.fillStyle = 'rgba(100, 50, 150, 0.2)';
-                ctx.fillRect(0, 0, 512, 512);
                 
                 const texture = new THREE.CanvasTexture(canvas);
                 const discMat = new THREE.MeshBasicMaterial({ 
                     map: texture, 
                     transparent: true,
-                    side: THREE.DoubleSide
+                    side: THREE.DoubleSide,
+                    depthWrite: false
                 });
                 
-                kanyeDisc = new THREE.Mesh(new THREE.CircleGeometry(0.5, 64), discMat);
-                kanyeDisc.position.z = 1.2;
+                kanyeDisc = new THREE.Mesh(new THREE.CircleGeometry(0.4, 64), discMat);
+                kanyeDisc.position.z = 1.21;
                 ballGroup.add(kanyeDisc);
                 
-                // White rim
-                const rimMat = new THREE.MeshBasicMaterial({ color: 0xf0f0f5, side: THREE.DoubleSide });
-                const rim = new THREE.Mesh(new THREE.RingGeometry(0.48, 0.55, 64), rimMat);
+                // Black rim
+                const rimMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0a, side: THREE.DoubleSide });
+                const rim = new THREE.Mesh(new THREE.RingGeometry(0.46, 0.52, 64), rimMat);
                 rim.position.z = 1.19;
                 ballGroup.add(rim);
             };
@@ -665,10 +729,15 @@
 
             // Update shaders
             if (nebulaMesh) nebulaMesh.material.uniforms.uTime.value = time;
-            if (innerLiquid) {
+            if (innerLiquid && innerLiquid.material.uniforms) {
                 innerLiquid.material.uniforms.uTime.value = time;
                 innerLiquid.material.uniforms.uLiquidOffset.value.set(liquidOffset.x, liquidOffset.y);
                 innerLiquid.material.uniforms.uShake.value = shakeIntensity;
+            }
+            if (window.liquidDiscMat && window.liquidDiscMat.uniforms) {
+                window.liquidDiscMat.uniforms.uTime.value = time;
+                window.liquidDiscMat.uniforms.uLiquidOffset.value.set(liquidOffset.x, liquidOffset.y);
+                window.liquidDiscMat.uniforms.uShake.value = shakeIntensity;
             }
             if (outerBall) outerBall.material.uniforms.uTime.value = time;
 
