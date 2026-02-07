@@ -15,236 +15,176 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0f 100%);
+            background: #000;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             overflow: hidden;
             color: #fff;
         }
 
-        /* Stars background */
-        .stars {
+        #canvas-container {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none;
-            z-index: 0;
+            z-index: 1;
         }
 
-        .star {
-            position: absolute;
-            background: white;
-            border-radius: 50%;
-            animation: twinkle 3s ease-in-out infinite;
-        }
-
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 1; }
-        }
-
-        /* Container */
-        .container {
+        .ui-layer {
             position: relative;
             z-index: 10;
-            text-align: center;
-            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
         }
 
         .title {
             font-family: 'Bebas Neue', sans-serif;
-            font-size: clamp(2.5rem, 10vw, 4rem);
-            letter-spacing: 0.15em;
+            font-size: clamp(2rem, 8vw, 3.5rem);
+            letter-spacing: 0.2em;
+            text-shadow: 0 0 40px rgba(138, 43, 226, 0.6);
             margin-bottom: 5px;
-            text-shadow: 0 0 30px rgba(138, 43, 226, 0.5);
         }
 
         .subtitle {
-            font-size: 0.8rem;
-            letter-spacing: 0.3em;
-            color: #888;
-            margin-bottom: 40px;
+            font-size: 0.75rem;
+            letter-spacing: 0.4em;
+            color: #666;
+            margin-bottom: 30px;
         }
 
-        /* The 8-Ball */
-        .ball-container {
-            perspective: 1000px;
-            margin: 20px auto;
-        }
-
-        .ball {
-            width: 280px;
-            height: 280px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, #444, #111 50%, #000 100%);
-            box-shadow: 
-                inset -30px -30px 60px rgba(0,0,0,0.8),
-                inset 20px 20px 40px rgba(255,255,255,0.05),
-                0 0 60px rgba(0,0,0,0.8),
-                0 20px 60px rgba(0,0,0,0.6);
-            position: relative;
-            margin: 0 auto;
-            transform-style: preserve-3d;
-            transition: transform 0.3s ease;
-            cursor: pointer;
-        }
-
-        .ball:hover {
-            transform: rotateX(5deg) rotateY(-5deg);
-        }
-
-        .ball.shaking {
-            animation: shake 0.6s ease-in-out;
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0) rotateZ(0); }
-            10% { transform: translateX(-10px) rotateZ(-5deg); }
-            20% { transform: translateX(10px) rotateZ(5deg); }
-            30% { transform: translateX(-10px) rotateZ(-3deg); }
-            40% { transform: translateX(10px) rotateZ(3deg); }
-            50% { transform: translateX(-5px) rotateZ(-2deg); }
-            60% { transform: translateX(5px) rotateZ(2deg); }
-            70% { transform: translateX(-3px) rotateZ(-1deg); }
-            80% { transform: translateX(3px) rotateZ(1deg); }
-        }
-
-        /* The window/triangle */
-        .window {
+        /* Quote display inside ball area */
+        .quote-container {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 130px;
-            height: 130px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #1a1a3a 0%, #0d0d1a 100%);
-            box-shadow: 
-                inset 0 0 30px rgba(75, 0, 130, 0.5),
-                0 0 20px rgba(75, 0, 130, 0.3);
+            width: 320px;
+            height: 320px;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
-        }
-
-        .triangle {
-            width: 0;
-            height: 0;
-            border-left: 50px solid transparent;
-            border-right: 50px solid transparent;
-            border-bottom: 90px solid #1e1e4a;
-            position: relative;
-            filter: drop-shadow(0 0 10px rgba(138, 43, 226, 0.4));
-        }
-
-        .triangle-inner {
-            position: absolute;
-            top: 15px;
-            left: -35px;
-            width: 70px;
+            padding: 50px;
             text-align: center;
+            pointer-events: none;
         }
 
-        .answer {
+        .quote-text {
             font-family: 'Bebas Neue', sans-serif;
-            font-size: 0.7rem;
-            letter-spacing: 0.1em;
-            color: #fff;
-            text-shadow: 0 0 10px rgba(138, 43, 226, 0.8);
-            opacity: 0;
-            transition: opacity 0.5s ease;
+            font-size: 1.4rem;
             line-height: 1.2;
+            letter-spacing: 0.05em;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(138, 43, 226, 0.8);
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.6s ease;
         }
 
-        .answer.visible {
+        .quote-text.visible {
             opacity: 1;
+            transform: scale(1);
         }
 
-        .answer.loading {
+        .quote-text.loading {
+            opacity: 0.5;
             animation: pulse 1s ease-in-out infinite;
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 0.8; }
+            0%, 100% { opacity: 0.3; transform: scale(0.95); }
+            50% { opacity: 0.6; transform: scale(1); }
         }
 
-        /* "8" on the ball */
-        .eight {
+        .quote-attr {
             position: absolute;
-            top: 15px;
+            bottom: 60px;
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            color: rgba(255,255,255,0.5);
+            opacity: 0;
+            transition: opacity 0.5s ease 0.3s;
+        }
+
+        .quote-attr.visible {
+            opacity: 1;
+        }
+
+        /* Input panel */
+        .input-panel {
+            position: fixed;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: 2.5rem;
-            color: #fff;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            opacity: 0.9;
+            width: 90%;
+            max-width: 500px;
+            pointer-events: auto;
+            z-index: 20;
         }
 
-        /* Input section */
-        .input-section {
-            margin-top: 40px;
-            max-width: 400px;
-            width: 100%;
+        .input-wrapper {
+            background: rgba(10, 10, 20, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(138, 43, 226, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: rgba(138, 43, 226, 0.6);
+            box-shadow: 0 0 40px rgba(138, 43, 226, 0.2);
         }
 
         .input-label {
-            font-size: 0.7rem;
-            letter-spacing: 0.2em;
+            font-size: 0.65rem;
+            letter-spacing: 0.25em;
             color: #666;
             margin-bottom: 10px;
             display: block;
         }
 
-        textarea {
-            width: 100%;
-            min-height: 80px;
+        .input-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
             padding: 15px;
             font-family: 'Inter', sans-serif;
-            font-size: 0.95rem;
+            font-size: 1rem;
             background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
+            border: none;
+            border-radius: 10px;
             color: #fff;
-            resize: none;
             outline: none;
-            transition: all 0.3s ease;
         }
 
-        textarea::placeholder {
-            color: #555;
-        }
-
-        textarea:focus {
-            border-color: rgba(138, 43, 226, 0.5);
-            box-shadow: 0 0 20px rgba(138, 43, 226, 0.2);
+        input[type="text"]::placeholder {
+            color: #444;
         }
 
         .shake-btn {
-            margin-top: 20px;
-            padding: 15px 50px;
+            padding: 15px 25px;
             font-family: 'Bebas Neue', sans-serif;
-            font-size: 1.2rem;
-            letter-spacing: 0.15em;
-            background: linear-gradient(135deg, #4a0080, #2a0050);
+            font-size: 1rem;
+            letter-spacing: 0.1em;
+            background: linear-gradient(135deg, #6a0dad, #4a0080);
             color: #fff;
             border: none;
-            border-radius: 30px;
+            border-radius: 10px;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 5px 30px rgba(75, 0, 130, 0.4);
+            white-space: nowrap;
         }
 
         .shake-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 40px rgba(138, 43, 226, 0.5);
+            transform: scale(1.05);
+            box-shadow: 0 5px 30px rgba(138, 43, 226, 0.5);
         }
 
         .shake-btn:disabled {
@@ -253,165 +193,359 @@
             transform: none;
         }
 
-        /* Quote reveal */
-        .quote-panel {
+        .hint {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 0.7rem;
+            color: #444;
+            letter-spacing: 0.1em;
+        }
+
+        /* Reset button */
+        .reset-btn {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(to top, rgba(0,0,0,0.95), transparent);
-            padding: 40px 20px;
-            transform: translateY(100%);
-            transition: transform 0.5s ease;
-        }
-
-        .quote-panel.visible {
-            transform: translateY(0);
-        }
-
-        .full-quote {
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: clamp(1.5rem, 5vw, 2.5rem);
-            text-align: center;
-            max-width: 700px;
-            margin: 0 auto 15px;
-            line-height: 1.2;
-            text-shadow: 0 0 30px rgba(138, 43, 226, 0.5);
-        }
-
-        .quote-attr {
-            text-align: center;
-            font-size: 0.8rem;
-            color: #888;
-            letter-spacing: 0.2em;
-        }
-
-        .ask-again {
-            display: block;
-            margin: 25px auto 0;
-            padding: 10px 30px;
-            background: transparent;
-            border: 1px solid #444;
-            color: #888;
-            font-size: 0.75rem;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            font-size: 0.7rem;
             letter-spacing: 0.15em;
+            background: transparent;
+            border: 1px solid #333;
+            color: #555;
             cursor: pointer;
-            transition: all 0.3s;
+            z-index: 20;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
         }
 
-        .ask-again:hover {
-            border-color: #888;
+        .reset-btn.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .reset-btn:hover {
+            border-color: #666;
             color: #fff;
         }
 
-        /* Glow effect on ball when active */
-        .ball.active {
-            box-shadow: 
-                inset -30px -30px 60px rgba(0,0,0,0.8),
-                inset 20px 20px 40px rgba(255,255,255,0.05),
-                0 0 80px rgba(138, 43, 226, 0.4),
-                0 20px 60px rgba(0,0,0,0.6);
-        }
-
-        /* Responsive */
-        @media (max-width: 400px) {
-            .ball {
-                width: 220px;
-                height: 220px;
+        /* Mobile */
+        @media (max-width: 500px) {
+            .input-row {
+                flex-direction: column;
             }
-            .window {
-                width: 100px;
-                height: 100px;
+            .quote-container {
+                width: 280px;
+                height: 280px;
+                padding: 40px;
             }
-            .triangle {
-                border-left: 40px solid transparent;
-                border-right: 40px solid transparent;
-                border-bottom: 70px solid #1e1e4a;
+            .quote-text {
+                font-size: 1.1rem;
             }
-            .triangle-inner {
-                width: 55px;
-                left: -27px;
-                top: 12px;
-            }
-            .answer {
-                font-size: 0.55rem;
-            }
-        }
-
-        footer {
-            position: fixed;
-            bottom: 10px;
-            font-size: 0.65rem;
-            color: #444;
-            letter-spacing: 0.1em;
-            z-index: 5;
-        }
-
-        .quote-panel.visible ~ footer {
-            opacity: 0;
         }
     </style>
 </head>
 <body>
-    <!-- Stars -->
-    <div class="stars" id="stars"></div>
+    <div id="canvas-container"></div>
 
-    <div class="container">
+    <div class="ui-layer">
         <h1 class="title">YE-BALL</h1>
-        <p class="subtitle">SHAKE FOR WISDOM</p>
-
-        <div class="ball-container">
-            <div class="ball" id="ball" onclick="shakeBall()">
-                <span class="eight">∞</span>
-                <div class="window">
-                    <div class="triangle">
-                        <div class="triangle-inner">
-                            <p class="answer" id="answer">ASK YE</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <p class="subtitle">TOUCH THE ORB • RECEIVE WISDOM</p>
+        
+        <div class="quote-container">
+            <p class="quote-text" id="quoteText">ASK AND<br>YOU SHALL<br>RECEIVE</p>
         </div>
+        <p class="quote-attr" id="quoteAttr">— KANYE WEST</p>
+    </div>
 
-        <div class="input-section">
+    <div class="input-panel">
+        <div class="input-wrapper">
             <label class="input-label">WHAT TROUBLES YOU?</label>
-            <textarea 
-                id="issueInput" 
-                placeholder="Speak your truth..."
-                maxlength="300"
-            ></textarea>
-            <button class="shake-btn" id="shakeBtn" onclick="shakeBall()">
-                SHAKE THE BALL
-            </button>
+            <div class="input-row">
+                <input type="text" id="issueInput" placeholder="Speak your truth..." maxlength="200">
+                <button class="shake-btn" id="shakeBtn" onclick="seekWisdom()">SHAKE</button>
+            </div>
+            <p class="hint">Press Enter or click the orb</p>
         </div>
     </div>
 
-    <!-- Quote Panel -->
-    <div class="quote-panel" id="quotePanel">
-        <p class="full-quote" id="fullQuote"></p>
-        <p class="quote-attr">— KANYE WEST</p>
-        <button class="ask-again" onclick="reset()">ASK AGAIN</button>
-    </div>
+    <button class="reset-btn" id="resetBtn" onclick="reset()">ASK AGAIN</button>
 
-    <footer>Powered by the cosmos & api.kanye.rest</footer>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // Create stars
-        const starsContainer = document.getElementById('stars');
-        for (let i = 0; i < 100; i++) {
-            const star = document.createElement('div');
-            star.className = 'star';
-            star.style.left = Math.random() * 100 + '%';
-            star.style.top = Math.random() * 100 + '%';
-            star.style.width = star.style.height = (Math.random() * 2 + 1) + 'px';
-            star.style.animationDelay = Math.random() * 3 + 's';
-            starsContainer.appendChild(star);
+        // Three.js setup
+        let scene, camera, renderer, sphere, uniforms;
+        let mouse = { x: 0.5, y: 0.5 };
+        let targetMouse = { x: 0.5, y: 0.5 };
+        let isHovering = false;
+        let isActive = false;
+        let time = 0;
+
+        // Vertex shader
+        const vertexShader = `
+            varying vec2 vUv;
+            varying vec3 vNormal;
+            varying vec3 vPosition;
+            
+            uniform float uTime;
+            uniform float uHover;
+            uniform vec2 uMouse;
+            
+            void main() {
+                vUv = uv;
+                vNormal = normalize(normalMatrix * normal);
+                vPosition = position;
+                
+                // Subtle vertex displacement on hover
+                vec3 pos = position;
+                float dist = distance(uv, uMouse);
+                float wave = sin(dist * 10.0 - uTime * 3.0) * 0.02 * uHover;
+                pos += normal * wave;
+                
+                // Breathing effect
+                float breath = sin(uTime * 0.5) * 0.01;
+                pos *= 1.0 + breath;
+                
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+            }
+        `;
+
+        // Fragment shader
+        const fragmentShader = `
+            varying vec2 vUv;
+            varying vec3 vNormal;
+            varying vec3 vPosition;
+            
+            uniform float uTime;
+            uniform float uHover;
+            uniform float uActive;
+            uniform vec2 uMouse;
+            
+            // Noise function
+            vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+            vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+            
+            float snoise(vec3 v) {
+                const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+                const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+                vec3 i = floor(v + dot(v, C.yyy));
+                vec3 x0 = v - i + dot(i, C.xxx);
+                vec3 g = step(x0.yzx, x0.xyz);
+                vec3 l = 1.0 - g;
+                vec3 i1 = min(g.xyz, l.zxy);
+                vec3 i2 = max(g.xyz, l.zxy);
+                vec3 x1 = x0 - i1 + C.xxx;
+                vec3 x2 = x0 - i2 + C.yyy;
+                vec3 x3 = x0 - D.yyy;
+                i = mod289(i);
+                vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+                float n_ = 0.142857142857;
+                vec3 ns = n_ * D.wyz - D.xzx;
+                vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+                vec4 x_ = floor(j * ns.z);
+                vec4 y_ = floor(j - 7.0 * x_);
+                vec4 x = x_ *ns.x + ns.yyyy;
+                vec4 y = y_ *ns.x + ns.yyyy;
+                vec4 h = 1.0 - abs(x) - abs(y);
+                vec4 b0 = vec4(x.xy, y.xy);
+                vec4 b1 = vec4(x.zw, y.zw);
+                vec4 s0 = floor(b0)*2.0 + 1.0;
+                vec4 s1 = floor(b1)*2.0 + 1.0;
+                vec4 sh = -step(h, vec4(0.0));
+                vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+                vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+                vec3 p0 = vec3(a0.xy, h.x);
+                vec3 p1 = vec3(a0.zw, h.y);
+                vec3 p2 = vec3(a1.xy, h.z);
+                vec3 p3 = vec3(a1.zw, h.w);
+                vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+                p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+                vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+                m = m * m;
+                return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+            }
+            
+            void main() {
+                // Base colors
+                vec3 deepPurple = vec3(0.1, 0.0, 0.2);
+                vec3 darkBlue = vec3(0.0, 0.0, 0.1);
+                vec3 highlight = vec3(0.5, 0.2, 0.8);
+                vec3 glow = vec3(0.6, 0.3, 1.0);
+                
+                // Fresnel effect for edge glow
+                vec3 viewDir = normalize(cameraPosition - vPosition);
+                float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.0);
+                
+                // Animated noise for surface detail
+                float noise = snoise(vPosition * 3.0 + uTime * 0.2) * 0.5 + 0.5;
+                float noise2 = snoise(vPosition * 5.0 - uTime * 0.3) * 0.5 + 0.5;
+                
+                // Mouse interaction ripple
+                float mouseDist = distance(vUv, uMouse);
+                float ripple = sin(mouseDist * 20.0 - uTime * 4.0) * 0.5 + 0.5;
+                ripple *= smoothstep(0.5, 0.0, mouseDist) * uHover;
+                
+                // Mix colors
+                vec3 color = mix(deepPurple, darkBlue, noise);
+                color = mix(color, highlight, noise2 * 0.3);
+                color += fresnel * glow * (0.5 + uHover * 0.5);
+                color += ripple * highlight * 0.5;
+                
+                // Active state glow
+                color += glow * uActive * 0.3 * (sin(uTime * 3.0) * 0.5 + 0.5);
+                
+                // Specular highlight
+                vec3 lightDir = normalize(vec3(uMouse.x - 0.5, uMouse.y - 0.5, 1.0));
+                float spec = pow(max(dot(reflect(-lightDir, vNormal), viewDir), 0.0), 32.0);
+                color += vec3(1.0) * spec * 0.5 * (1.0 + uHover);
+                
+                // Vignette on sphere
+                float vignette = 1.0 - fresnel * 0.3;
+                color *= vignette;
+                
+                gl_FragColor = vec4(color, 0.95);
+            }
+        `;
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 4;
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // Uniforms for shaders
+            uniforms = {
+                uTime: { value: 0 },
+                uHover: { value: 0 },
+                uActive: { value: 0 },
+                uMouse: { value: new THREE.Vector2(0.5, 0.5) }
+            };
+            
+            // Sphere with custom shader material
+            const geometry = new THREE.SphereGeometry(1.3, 128, 128);
+            const material = new THREE.ShaderMaterial({
+                vertexShader,
+                fragmentShader,
+                uniforms,
+                transparent: true
+            });
+            
+            sphere = new THREE.Mesh(geometry, material);
+            scene.add(sphere);
+            
+            // Background particles
+            createParticles();
+            
+            // Events
+            window.addEventListener('resize', onResize);
+            window.addEventListener('mousemove', onMouseMove);
+            renderer.domElement.addEventListener('click', onSphereClick);
+            renderer.domElement.addEventListener('mouseenter', () => isHovering = true);
+            renderer.domElement.addEventListener('mouseleave', () => isHovering = false);
+            
+            // Touch support
+            renderer.domElement.addEventListener('touchmove', onTouchMove);
+            renderer.domElement.addEventListener('touchstart', onSphereClick);
+            
+            animate();
         }
 
-        let isShaking = false;
+        function createParticles() {
+            const particleCount = 500;
+            const positions = new Float32Array(particleCount * 3);
+            
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 20;
+                positions[i + 1] = (Math.random() - 0.5) * 20;
+                positions[i + 2] = (Math.random() - 0.5) * 20;
+            }
+            
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const material = new THREE.PointsMaterial({
+                color: 0x6a0dad,
+                size: 0.02,
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+        }
 
-        async function shakeBall() {
-            if (isShaking) return;
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onMouseMove(e) {
+            targetMouse.x = e.clientX / window.innerWidth;
+            targetMouse.y = 1 - (e.clientY / window.innerHeight);
+        }
+
+        function onTouchMove(e) {
+            if (e.touches.length > 0) {
+                targetMouse.x = e.touches[0].clientX / window.innerWidth;
+                targetMouse.y = 1 - (e.touches[0].clientY / window.innerHeight);
+            }
+        }
+
+        function onSphereClick(e) {
+            // Check if click is on the sphere area
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const clickX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clickY = e.clientY || (e.touches && e.touches[0].clientY);
+            const dist = Math.sqrt(Math.pow(clickX - centerX, 2) + Math.pow(clickY - centerY, 2));
+            
+            if (dist < 180) {
+                seekWisdom();
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            time += 0.016;
+            uniforms.uTime.value = time;
+            
+            // Smooth mouse interpolation
+            mouse.x += (targetMouse.x - mouse.x) * 0.05;
+            mouse.y += (targetMouse.y - mouse.y) * 0.05;
+            uniforms.uMouse.value.set(mouse.x, mouse.y);
+            
+            // Hover state
+            const targetHover = isHovering ? 1 : 0;
+            uniforms.uHover.value += (targetHover - uniforms.uHover.value) * 0.1;
+            
+            // Active state
+            const targetActive = isActive ? 1 : 0;
+            uniforms.uActive.value += (targetActive - uniforms.uActive.value) * 0.1;
+            
+            // Subtle sphere rotation following mouse
+            sphere.rotation.y += (mouse.x - 0.5) * 0.01;
+            sphere.rotation.x += (mouse.y - 0.5) * 0.01;
+            
+            renderer.render(scene, camera);
+        }
+
+        // Wisdom logic
+        let isSeeking = false;
+
+        async function seekWisdom() {
+            if (isSeeking) return;
             
             const issue = document.getElementById('issueInput').value.trim();
             if (!issue) {
@@ -419,85 +553,79 @@
                 return;
             }
 
-            isShaking = true;
-            const ball = document.getElementById('ball');
-            const answer = document.getElementById('answer');
+            isSeeking = true;
+            isActive = true;
+            
+            const quoteText = document.getElementById('quoteText');
+            const quoteAttr = document.getElementById('quoteAttr');
             const btn = document.getElementById('shakeBtn');
             
             btn.disabled = true;
-            ball.classList.add('shaking', 'active');
-            answer.textContent = '...';
-            answer.classList.remove('visible');
-            answer.classList.add('loading');
+            quoteText.classList.remove('visible');
+            quoteAttr.classList.remove('visible');
+            
+            setTimeout(() => {
+                quoteText.textContent = '...';
+                quoteText.classList.add('loading');
+                quoteText.classList.add('visible');
+            }, 200);
 
             try {
-                // Start fetching
-                const fetchPromise = fetch('https://api.kanye.rest/').then(r => r.json());
+                const response = await fetch('https://api.kanye.rest/');
+                const data = await response.json();
                 
-                // Shake animation duration
-                await new Promise(resolve => setTimeout(resolve, 600));
-                ball.classList.remove('shaking');
+                await new Promise(resolve => setTimeout(resolve, 1500));
                 
-                // Wait for quote
-                const data = await fetchPromise;
+                quoteText.classList.remove('loading');
+                quoteText.textContent = `"${data.quote}"`;
+                quoteText.classList.add('visible');
+                quoteAttr.classList.add('visible');
                 
-                // Brief pause for effect
-                await new Promise(resolve => setTimeout(resolve, 400));
-                
-                // Show preview in ball
-                answer.classList.remove('loading');
-                answer.textContent = truncate(data.quote, 30);
-                answer.classList.add('visible');
-                
-                // Show full quote panel after delay
-                await new Promise(resolve => setTimeout(resolve, 800));
-                document.getElementById('fullQuote').textContent = `"${data.quote}"`;
-                document.getElementById('quotePanel').classList.add('visible');
+                document.getElementById('resetBtn').classList.add('visible');
                 
             } catch (error) {
                 const fallbacks = [
                     "I am God's vessel. But my greatest pain in life is that I will never be able to see myself perform live.",
-                    "I hate when I'm on a flight and I wake up with a water bottle next to me like oh great now I gotta be responsible for this water bottle.",
-                    "I feel like I'm too busy writing history to read it.",
-                    "People always tell you 'Be humble. Be humble.' When was the last time someone told you to be amazing?",
+                    "People always tell you 'Be humble.' When was the last time someone told you to be amazing?",
                     "Everything I'm not made me everything I am.",
-                    "I am not a fan of the word 'No.'",
-                    "My greatest award is what I'm about to do."
+                    "I feel like I'm too busy writing history to read it.",
+                    "My greatest award is what I'm about to do.",
+                    "I refuse to accept other people's ideas of happiness for me.",
+                    "Would you believe in what you believe in if you were the only one who believed it?"
                 ];
                 const quote = fallbacks[Math.floor(Math.random() * fallbacks.length)];
                 
-                answer.classList.remove('loading');
-                answer.textContent = truncate(quote, 30);
-                answer.classList.add('visible');
+                quoteText.classList.remove('loading');
+                quoteText.textContent = `"${quote}"`;
+                quoteText.classList.add('visible');
+                quoteAttr.classList.add('visible');
                 
-                await new Promise(resolve => setTimeout(resolve, 800));
-                document.getElementById('fullQuote').textContent = `"${quote}"`;
-                document.getElementById('quotePanel').classList.add('visible');
+                document.getElementById('resetBtn').classList.add('visible');
             }
         }
 
-        function truncate(str, len) {
-            if (str.length <= len) return str;
-            return str.substring(0, len).trim() + '...';
-        }
-
         function reset() {
-            isShaking = false;
-            document.getElementById('quotePanel').classList.remove('visible');
-            document.getElementById('ball').classList.remove('active');
-            document.getElementById('answer').textContent = 'ASK YE';
-            document.getElementById('answer').classList.add('visible');
+            isSeeking = false;
+            isActive = false;
+            
+            document.getElementById('quoteText').textContent = 'ASK AND\nYOU SHALL\nRECEIVE';
+            document.getElementById('quoteText').classList.add('visible');
+            document.getElementById('quoteAttr').classList.remove('visible');
+            document.getElementById('resetBtn').classList.remove('visible');
             document.getElementById('shakeBtn').disabled = false;
             document.getElementById('issueInput').value = '';
         }
 
-        // Keyboard submit
+        // Keyboard
         document.getElementById('issueInput').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
+            if (e.key === 'Enter') {
                 e.preventDefault();
-                shakeBall();
+                seekWisdom();
             }
         });
+
+        // Init
+        init();
     </script>
 </body>
 </html>
