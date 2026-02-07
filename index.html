@@ -307,7 +307,7 @@
             <label class="input-label">WHAT TROUBLES YOU?</label>
             <div class="input-row">
                 <input type="text" id="issueInput" placeholder="Speak your truth..." maxlength="200">
-                <button class="shake-btn" id="shakeBtn" onclick="handleButtonClick()">SHAKE</button>
+                <button class="shake-btn" id="shakeBtn" onclick="handleButtonClick()">SHAKE DEVICE</button>
             </div>
             <p class="hint" id="hintText">Press Enter, tap the orb, or shake your phone</p>
         </div>
@@ -878,10 +878,10 @@
             const btn = document.getElementById('shakeBtn');
             isResetMode = resetMode;
             if (resetMode) {
-                btn.textContent = 'ASK AGAIN';
+                btn.textContent = 'ASK YE AGAIN';
                 btn.classList.add('reset-mode');
             } else {
-                btn.textContent = 'SHAKE';
+                btn.textContent = 'SHAKE DEVICE';
                 btn.classList.remove('reset-mode');
             }
         }
