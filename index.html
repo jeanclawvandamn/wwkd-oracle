@@ -532,8 +532,8 @@
                 kanyeDisc.position.z = 1.2;
                 ballGroup.add(kanyeDisc);
                 
-                // White rim
-                const rimMat = new THREE.MeshBasicMaterial({ color: 0xf0f0f5, side: THREE.DoubleSide });
+                // Black rim
+                const rimMat = new THREE.MeshBasicMaterial({ color: 0x111111, side: THREE.DoubleSide });
                 const rim = new THREE.Mesh(new THREE.RingGeometry(0.48, 0.55, 64), rimMat);
                 rim.position.z = 1.19;
                 ballGroup.add(rim);
