@@ -380,25 +380,28 @@
             
             void main() {
                 vec3 viewDir = normalize(cameraPosition - vPosition);
-                float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.0);
+                float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 2.5);
                 
-                // Black tinted glass
-                vec3 color = vec3(0.01, 0.01, 0.01);
+                // Clear glass
+                vec3 color = vec3(0.03, 0.03, 0.05);
                 
-                // Subtle dark edge highlight
-                color += vec3(0.05, 0.05, 0.06) * fresnel;
+                // Glass edge highlight
+                color += vec3(0.1, 0.1, 0.15) * fresnel;
                 
-                // Specular highlights - crisp white
+                // Strong specular for glassy look
                 vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
-                float spec = pow(max(dot(reflect(-lightDir, vNormal), viewDir), 0.0), 64.0);
-                color += vec3(1.0) * spec * 0.6;
+                float spec = pow(max(dot(reflect(-lightDir, vNormal), viewDir), 0.0), 128.0);
+                color += vec3(1.0) * spec * 0.9;
                 
                 // Secondary specular
-                vec3 lightDir2 = normalize(vec3(-0.5, 0.8, 0.5));
-                float spec2 = pow(max(dot(reflect(-lightDir2, vNormal), viewDir), 0.0), 32.0);
-                color += vec3(0.8, 0.8, 0.9) * spec2 * 0.3;
+                vec3 lightDir2 = normalize(vec3(-0.5, 0.8, 0.3));
+                float spec2 = pow(max(dot(reflect(-lightDir2, vNormal), viewDir), 0.0), 64.0);
+                color += vec3(0.9, 0.95, 1.0) * spec2 * 0.5;
                 
-                gl_FragColor = vec4(color, 0.4 + fresnel * 0.3);
+                // Transparent - see through center, edges more visible
+                float alpha = 0.12 + fresnel * 0.45;
+                
+                gl_FragColor = vec4(color, alpha);
             }
         `;
 
@@ -532,8 +535,8 @@
                 kanyeDisc.position.z = 1.2;
                 ballGroup.add(kanyeDisc);
                 
-                // Black rim
-                const rimMat = new THREE.MeshBasicMaterial({ color: 0x111111, side: THREE.DoubleSide });
+                // Glass rim
+                const rimMat = new THREE.MeshBasicMaterial({ color: 0x333344, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
                 const rim = new THREE.Mesh(new THREE.RingGeometry(0.48, 0.55, 64), rimMat);
                 rim.position.z = 1.19;
                 ballGroup.add(rim);
