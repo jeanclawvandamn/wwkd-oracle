@@ -1,0 +1,8 @@
+{
+  "name": "wwkd-kanye-oracle",
+  "version": "1.0.0",
+  "description": "What Would Kanye Do - A minimalist wisdom oracle",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
