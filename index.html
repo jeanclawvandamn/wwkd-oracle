@@ -380,28 +380,26 @@
             
             void main() {
                 vec3 viewDir = normalize(cameraPosition - vPosition);
-                float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 2.5);
+                float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.0);
                 
-                // Clear glass
-                vec3 color = vec3(0.03, 0.03, 0.05);
+                // Solid black
+                vec3 color = vec3(0.02, 0.02, 0.02);
                 
-                // Glass edge highlight
-                color += vec3(0.1, 0.1, 0.15) * fresnel;
+                // Subtle edge highlight
+                color += vec3(0.04, 0.04, 0.04) * fresnel;
                 
-                // Strong specular for glassy look
+                // Specular highlights for glossy 8-ball look
                 vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
-                float spec = pow(max(dot(reflect(-lightDir, vNormal), viewDir), 0.0), 128.0);
-                color += vec3(1.0) * spec * 0.9;
+                float spec = pow(max(dot(reflect(-lightDir, vNormal), viewDir), 0.0), 64.0);
+                color += vec3(1.0) * spec * 0.7;
                 
                 // Secondary specular
-                vec3 lightDir2 = normalize(vec3(-0.5, 0.8, 0.3));
-                float spec2 = pow(max(dot(reflect(-lightDir2, vNormal), viewDir), 0.0), 64.0);
-                color += vec3(0.9, 0.95, 1.0) * spec2 * 0.5;
+                vec3 lightDir2 = normalize(vec3(-0.5, 0.8, 0.5));
+                float spec2 = pow(max(dot(reflect(-lightDir2, vNormal), viewDir), 0.0), 32.0);
+                color += vec3(0.9) * spec2 * 0.4;
                 
-                // Transparent - see through center, edges more visible
-                float alpha = 0.12 + fresnel * 0.45;
-                
-                gl_FragColor = vec4(color, alpha);
+                // Fully opaque black
+                gl_FragColor = vec4(color, 1.0);
             }
         `;
 
@@ -489,7 +487,65 @@
             outerBall = new THREE.Mesh(new THREE.SphereGeometry(1.3, 64, 64), glassMat);
             ballGroup.add(outerBall);
 
-            // Kanye window disc
+            // Purple liquid shader for porthole
+            const portholeLiquidShader = `
+                varying vec2 vUv;
+                uniform float uTime;
+                uniform vec2 uLiquidOffset;
+                uniform float uShake;
+                
+                ${noiseGLSL}
+                
+                void main() {
+                    vec2 uv = vUv;
+                    vec2 center = vec2(0.5);
+                    float dist = length(uv - center);
+                    if (dist > 0.5) discard;
+                    
+                    // Sloshing offset
+                    vec2 slosh = uv + uLiquidOffset * 0.3;
+                    
+                    // Animated purple liquid
+                    float n1 = snoise(vec3(slosh * 4.0, uTime * 0.4)) * 0.5 + 0.5;
+                    float n2 = snoise(vec3(slosh * 6.0 + 50.0, uTime * 0.3)) * 0.5 + 0.5;
+                    
+                    vec3 purple1 = vec3(0.4, 0.15, 0.6);
+                    vec3 purple2 = vec3(0.2, 0.05, 0.35);
+                    vec3 purple3 = vec3(0.55, 0.3, 0.8);
+                    
+                    vec3 color = mix(purple1, purple2, n1);
+                    color = mix(color, purple3, n2 * 0.4);
+                    
+                    // Depth effect
+                    color *= 1.0 - dist * 0.4;
+                    
+                    // Center highlight
+                    color += vec3(0.15, 0.08, 0.25) * (1.0 - dist * 1.5);
+                    
+                    // Shake energy
+                    color += vec3(0.3, 0.15, 0.5) * uShake * (sin(uTime * 10.0) * 0.5 + 0.5);
+                    
+                    gl_FragColor = vec4(color, 1.0);
+                }
+            `;
+            
+            // Create purple liquid disc for porthole
+            const liquidDiscMat = new THREE.ShaderMaterial({
+                vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+                fragmentShader: portholeLiquidShader,
+                uniforms: {
+                    uTime: { value: 0 },
+                    uLiquidOffset: { value: new THREE.Vector2(0, 0) },
+                    uShake: { value: 0 }
+                },
+                side: THREE.DoubleSide
+            });
+            const liquidDisc = new THREE.Mesh(new THREE.CircleGeometry(0.48, 64), liquidDiscMat);
+            liquidDisc.position.z = 1.15;
+            ballGroup.add(liquidDisc);
+            window.liquidDiscMat = liquidDiscMat;
+
+            // Kanye window disc (on top of liquid)
             const kanyeImg = document.getElementById('kanyeImg');
             const createKanyeDisc = () => {
                 const canvas = document.createElement('canvas');
@@ -497,48 +553,45 @@
                 canvas.height = 512;
                 const ctx = canvas.getContext('2d');
                 
+                // Transparent background
+                ctx.clearRect(0, 0, 512, 512);
+                
                 // Draw circular clip of Kanye
                 ctx.beginPath();
-                ctx.arc(256, 256, 250, 0, Math.PI * 2);
+                ctx.arc(256, 256, 180, 0, Math.PI * 2);
                 ctx.closePath();
                 ctx.clip();
                 
                 // Draw the image or fallback
                 if (kanyeImg.complete && kanyeImg.naturalWidth > 0) {
-                    ctx.drawImage(kanyeImg, 0, 0, 512, 512);
+                    ctx.drawImage(kanyeImg, 56, 56, 400, 400);
                 } else {
                     // Fallback YE text
-                    const grad = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
-                    grad.addColorStop(0, '#2a1a4a');
-                    grad.addColorStop(1, '#0a0515');
-                    ctx.fillStyle = grad;
-                    ctx.fillRect(0, 0, 512, 512);
                     ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 200px Arial';
+                    ctx.font = 'bold 160px Arial';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
+                    ctx.shadowColor = '#000';
+                    ctx.shadowBlur = 15;
                     ctx.fillText('YE', 256, 256);
                 }
-                
-                // Add subtle overlay
-                ctx.fillStyle = 'rgba(100, 50, 150, 0.2)';
-                ctx.fillRect(0, 0, 512, 512);
                 
                 const texture = new THREE.CanvasTexture(canvas);
                 const discMat = new THREE.MeshBasicMaterial({ 
                     map: texture, 
                     transparent: true,
-                    side: THREE.DoubleSide
+                    side: THREE.DoubleSide,
+                    depthWrite: false
                 });
                 
-                kanyeDisc = new THREE.Mesh(new THREE.CircleGeometry(0.5, 64), discMat);
+                kanyeDisc = new THREE.Mesh(new THREE.CircleGeometry(0.38, 64), discMat);
                 kanyeDisc.position.z = 1.2;
                 ballGroup.add(kanyeDisc);
                 
-                // Glass rim
-                const rimMat = new THREE.MeshBasicMaterial({ color: 0x333344, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
-                const rim = new THREE.Mesh(new THREE.RingGeometry(0.48, 0.55, 64), rimMat);
-                rim.position.z = 1.19;
+                // Black rim around porthole
+                const rimMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0a, side: THREE.DoubleSide });
+                const rim = new THREE.Mesh(new THREE.RingGeometry(0.46, 0.52, 64), rimMat);
+                rim.position.z = 1.18;
                 ballGroup.add(rim);
             };
             
@@ -668,10 +721,15 @@
 
             // Update shaders
             if (nebulaMesh) nebulaMesh.material.uniforms.uTime.value = time;
-            if (innerLiquid) {
+            if (innerLiquid && innerLiquid.material && innerLiquid.material.uniforms) {
                 innerLiquid.material.uniforms.uTime.value = time;
                 innerLiquid.material.uniforms.uLiquidOffset.value.set(liquidOffset.x, liquidOffset.y);
                 innerLiquid.material.uniforms.uShake.value = shakeIntensity;
+            }
+            if (window.liquidDiscMat && window.liquidDiscMat.uniforms) {
+                window.liquidDiscMat.uniforms.uTime.value = time;
+                window.liquidDiscMat.uniforms.uLiquidOffset.value.set(liquidOffset.x, liquidOffset.y);
+                window.liquidDiscMat.uniforms.uShake.value = shakeIntensity;
             }
             if (outerBall) outerBall.material.uniforms.uTime.value = time;
 
