@@ -321,8 +321,8 @@
         let lastShakeTime = 0;
         let shakeIntensity = 0;
 
-        // Kanye face image (base64 encoded simple iconic silhouette)
-        const kanyeImageUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Kanye_West_at_the_2009_Tribeca_Film_Festival_%28crop_2%29.jpg/220px-Kanye_West_at_the_2009_Tribeca_Film_Festival_%28crop_2%29.jpg';
+        // Kanye face image - served locally
+        const kanyeImageUrl = '/kanye_profile.jpg';
 
         // Background nebula shader
         const nebulaVertexShader = `
@@ -540,14 +540,9 @@
                 vec2 center = vec2(0.5, 0.5);
                 float dist = length(uv - center);
                 
-                if (dist > 0.48) {
-                    // White rim
-                    if (dist < 0.5) {
-                        gl_FragColor = vec4(0.9, 0.9, 0.95, 1.0);
-                    } else {
-                        discard;
-                    }
-                    return;
+                // Keep full circle visible
+                if (dist > 0.5) {
+                    discard;
                 }
                 
                 // Sample Kanye texture
@@ -615,10 +610,9 @@
             
             // Kanye window (circular disc on front of ball)
             const loader = new THREE.TextureLoader();
-            loader.crossOrigin = 'anonymous';
             
-            // Create window with placeholder, update when texture loads
-            const windowGeometry = new THREE.CircleGeometry(0.55, 64);
+            // Create window - sized to be prominent
+            const windowGeometry = new THREE.CircleGeometry(0.6, 64);
             const windowMaterial = new THREE.ShaderMaterial({
                 vertexShader: windowVertexShader,
                 fragmentShader: windowFragmentShader,
@@ -630,27 +624,30 @@
                 transparent: true
             });
             
+            // Set initial texture immediately so window is visible
+            windowMaterial.uniforms.uTexture.value = createInitialTexture();
+            
             kanyeWindow = new THREE.Mesh(windowGeometry, windowMaterial);
-            kanyeWindow.position.z = 1.15; // Slightly in front of ball surface
+            kanyeWindow.position.z = 1.18; // Slightly in front of ball surface
             ballGroup.add(kanyeWindow);
             
-            // Load Kanye texture
+            // Try to load Kanye photo, keep fallback if it fails
             loader.load(
                 kanyeImageUrl,
                 (texture) => {
                     texture.minFilter = THREE.LinearFilter;
+                    texture.magFilter = THREE.LinearFilter;
                     windowMaterial.uniforms.uTexture.value = texture;
+                    console.log('Kanye texture loaded');
                 },
                 undefined,
                 (err) => {
-                    console.log('Using fallback for Kanye texture');
-                    // Create a canvas-based fallback
-                    createFallbackTexture(windowMaterial);
+                    console.log('Using YE fallback texture');
                 }
             );
             
             // Add white rim ring around window
-            const rimGeometry = new THREE.RingGeometry(0.53, 0.6, 64);
+            const rimGeometry = new THREE.RingGeometry(0.58, 0.66, 64);
             const rimMaterial = new THREE.MeshBasicMaterial({ 
                 color: 0xf0f0f5,
                 side: THREE.DoubleSide
@@ -677,26 +674,54 @@
 
         function createFallbackTexture(material) {
             const canvas = document.createElement('canvas');
-            canvas.width = 256;
-            canvas.height = 256;
+            canvas.width = 512;
+            canvas.height = 512;
             const ctx = canvas.getContext('2d');
             
-            // Blue gradient background like 8-ball liquid
-            const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-            gradient.addColorStop(0, '#1a1a3e');
-            gradient.addColorStop(1, '#0a0a1a');
+            // Dark blue gradient background like 8-ball liquid
+            const gradient = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
+            gradient.addColorStop(0, '#1e1e4a');
+            gradient.addColorStop(0.7, '#0f0f2a');
+            gradient.addColorStop(1, '#050510');
             ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, 256, 256);
+            ctx.fillRect(0, 0, 512, 512);
             
-            // Draw stylized Ye silhouette
+            // Draw stylized YE text
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 120px Arial';
+            ctx.font = 'bold 180px "Bebas Neue", Arial, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('YE', 128, 128);
+            ctx.shadowColor = '#8844ff';
+            ctx.shadowBlur = 30;
+            ctx.fillText('YE', 256, 256);
             
             const texture = new THREE.CanvasTexture(canvas);
             material.uniforms.uTexture.value = texture;
+        }
+        
+        // Also create initial fallback immediately
+        function createInitialTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            const gradient = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
+            gradient.addColorStop(0, '#1e1e4a');
+            gradient.addColorStop(0.7, '#0f0f2a');
+            gradient.addColorStop(1, '#050510');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 512, 512);
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 180px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = '#8844ff';
+            ctx.shadowBlur = 30;
+            ctx.fillText('YE', 256, 256);
+            
+            return new THREE.CanvasTexture(canvas);
         }
 
         function createStars() {
@@ -900,14 +925,15 @@
             mouse.x += (targetMouse.x - mouse.x) * 0.05;
             mouse.y += (targetMouse.y - mouse.y) * 0.05;
             
-            // Subtle ball rotation following mouse
+            // Subtle ball rotation following mouse - starts centered
             if (ballGroup) {
-                ballGroup.rotation.y += (mouse.x - 0.5) * 0.02;
-                ballGroup.rotation.x += (mouse.y - 0.5) * 0.01;
+                // Target rotation based on mouse (centered at 0)
+                const targetRotY = (mouse.x - 0.5) * 0.4;
+                const targetRotX = (mouse.y - 0.5) * 0.3;
                 
-                // Clamp rotation so window stays visible
-                ballGroup.rotation.y = Math.max(-0.4, Math.min(0.4, ballGroup.rotation.y));
-                ballGroup.rotation.x = Math.max(-0.3, Math.min(0.3, ballGroup.rotation.x));
+                // Smooth interpolation
+                ballGroup.rotation.y += (targetRotY - ballGroup.rotation.y) * 0.05;
+                ballGroup.rotation.x += (targetRotX - ballGroup.rotation.x) * 0.05;
             }
             
             renderer.render(scene, camera);
